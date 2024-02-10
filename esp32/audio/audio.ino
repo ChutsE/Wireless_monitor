@@ -40,10 +40,25 @@ String ESP32_config = "fs:" + String(fs) +
                       ",format:" + String(len*4);
 
 void send_audio(){
+  String IPClient = "192.168.100.9"; 
+  int Port = 4321;
+  for (int i = 0; i < server.args(); i++){
+    if (server.argName(i) == "IPClient"){
+      IPClient = server.arg(i);
+    }
+    if (server.argName(i) == "Port"){
+      Port = server.arg(i).toInt();
+    }
+  }
+  
   server.send(200, "text/html", ESP32_config);
-  Serial.println("Request_attend");
+  Serial.println(IPClient + String(Port));
+  
+  IPAddress IPClientAddr;
+  IPClientAddr.fromString(IPClient); //String to 4 bytes
+  
   while(1){
-    Udp.beginPacket("192.168.100.9",4321);
+    Udp.beginPacket(IPClientAddr, Port);
     for(int i = 0;i < samples; i++){
       float t0 = micros();
       int depth = 0;

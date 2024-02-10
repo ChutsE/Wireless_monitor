@@ -2,31 +2,26 @@
 import urllib.request
 import pyaudio
 import socket
-from numpy.fft import fft, ifft
 import time
 import wave
 import speech_recognition as sr
+from numpy.fft import fft, ifft
 import matplotlib.pyplot as plt
 import os
 
-audio_path = os.getcwd() + '\\audio_record\\audio.wav'
-
-FORMAT = 32
-UDP_PORT = 4321
-RATE = 16000
-
-hostname=socket.gethostname()
-UDP_IP=socket.gethostbyname(hostname)
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-sock.bind((UDP_IP, UDP_PORT))
 
 p = pyaudio.PyAudio()
 
 r = sr.Recognizer()
 
-def request(ESP_IP):
+def request(ESP_IP, UDP_PORT = 4321, UDP_IP = socket.gethostbyname(socket.gethostname())):
+    sock.bind((UDP_IP, UDP_PORT))
     try:
-        response = urllib.request.urlopen("http://" + ESP_IP + "/getaudio")
+        response = urllib.request.urlopen("http://"   + ESP_IP +   #IP Address 
+                                          "/getaudio" +            #URI
+                                          "?IPClient" + UDP_IP +   #First Argument
+                                          "&Port"     + str(UDP_PORT))  #Second Argument
     except Exception as e:
         return f"{ESP_IP} ERROR : {e}"
     else:
@@ -41,19 +36,19 @@ def decoding_html(response):
         ESP32_config[key]= int(value)
     return ESP32_config
 
-def save(audio, path = audio_path):
+def save(audio, format, rate, path = os.getcwd() + '\\audio_record\\audio.wav'):
     if type(audio) != bytes:
         return f"{audio} isn't byte type"
     else:
         waveFile = wave.open(path,"wb")
         waveFile.setnchannels(1)
-        waveFile.setsampwidth(pyaudio.get_sample_size(FORMAT))
-        waveFile.setframerate(RATE)
+        waveFile.setsampwidth(pyaudio.get_sample_size(format))
+        waveFile.setframerate(rate)
         waveFile.writeframes(audio)
         waveFile.close()
         return "audio saved"
 
-def SpeechRecognition(path = audio_path):
+def SpeechRecognition(path = os.getcwd() + '\\audio_record\\audio.wav'):
     with sr.AudioFile(path) as source:
         record = r.record(source)
     try:
@@ -67,9 +62,9 @@ def main(ESP_IP="192.168.100.12"):
 
     stream = p.open(format   = ESP32_config["format"],
                     channels = 1,
-                    rate     = 14000, #ESP32_config["fs"],
+                    rate     = ESP32_config["fs"],
                     output   = True)
-    
+
     while True:
         try:
             data = sock.recvfrom(ESP32_config["samples"])[0]
