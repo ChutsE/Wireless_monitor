@@ -30,14 +30,16 @@ def request(ESP_IP):
     except Exception as e:
         return f"{ESP_IP} ERROR : {e}"
     else:
-        configs_string = str(response.read())[2:-1]
-        configs = configs_string.split(",")
-        
-        ESP32_config = {}
-        for config in configs:
-            [key, value] = config.split(":")
-            ESP32_config[key]= int(value)
-        return ESP32_config
+        return decoding_html(response)
+
+def decoding_html(response):
+    configs_string = str(response.read())[2:-1]
+    configs = configs_string.split(",")
+    ESP32_config = {}
+    for config in configs:
+        [key, value] = config.split(":")
+        ESP32_config[key]= int(value)
+    return ESP32_config
 
 def save(audio, path = audio_path):
     if type(audio) != bytes:
