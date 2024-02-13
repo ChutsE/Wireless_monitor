@@ -10,33 +10,23 @@ import matplotlib.pyplot as plt
 import os
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-UDP_PORT = 4321
-UDP_IP = socket.gethostbyname(socket.gethostname())
 
 p = pyaudio.PyAudio()
 
 r = sr.Recognizer()
 
-def request(ESP_IP):
+T_US = 62.5
+UDPS = 1024
+
+def request(ESP_IP, T_us = T_US, UDP_Samples = UDPS):
     
     try:
-        response = urllib.request.urlopen("http://"   + ESP_IP +        #IP Address 
-                                          "/getaudio" +                 #URI
-                                          "?IPClient" + UDP_IP +        #First Argument
-                                          "&Port"     + str(UDP_PORT))  #Second Argument
+        response = urllib.request.urlopen("http://"           + ESP_IP            +  #IP Address 
+                                          "/getaudio"         +                      #URI
+                                          "?T_us"             + str(T_us)         +  #First Argument
+                                          "&UDP_samples"      + str(UDP_Samples))    #Second Argument
     except Exception as e:
-        raise f"{ESP_IP} ERROR : {e}"
-    else:
-        return decoding_html(response)
-
-def decoding_html(response):
-    configs_string = str(response.read())[2:-1]
-    configs = configs_string.split(",")
-    ESP32_audio_config = {}
-    for config in configs:
-        [key, value] = config.split(":")
-        ESP32_audio_config[key]= int(value)
-    return ESP32_audio_config
+        raise f"{ESP_IP} ERROR : {e}" 
 
 def save(audio, format, rate, path = os.getcwd() + '\\audio_record\\audio.wav'):
     if type(audio) != bytes:
@@ -58,20 +48,21 @@ def SpeechRecognition(path = os.getcwd() + '\\audio_record\\audio.wav'):
     except Exception:
         return "Don't understandable"
 
-def main(ESP_IP="192.168.100.12"):
+def main(ESP_IP="192.168.100.3"):
     
-    ESP32_audio_config = request(ESP_IP)
+    request(ESP_IP)
 
-    stream = p.open(format   = ESP32_audio_config["format"],
+    stream = p.open(format   = 32,
                     channels = 1,
-                    rate     = ESP32_audio_config["fs"],
+                    rate     = int(1000000/T_US),
                     output   = True)
     
-    sock.bind((UDP_IP, UDP_PORT))
+    UDP_IP = socket.gethostbyname(socket.gethostname())
+    sock.bind((UDP_IP, 4321))
 
     while True:
         try:
-            data = sock.recvfrom(ESP32_audio_config["samples"])[0]
+            data = sock.recvfrom(UDPS)[0]
         except Exception as e:
             raise f"{ESP_IP} ERROR : {e}"
         else:
