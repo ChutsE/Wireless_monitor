@@ -15,13 +15,13 @@ void setup() {
     using namespace esp32cam;
     Config cfg;
     cfg.setPins(pins::AiThinker);
+    Res = esp32cam::Resolution::find(1600, 1200);
     cfg.setResolution(Res);
     cfg.setBufferCount(2);
     cfg.setJpeg(80);
  
     bool ok = Camera.begin(cfg);
     Serial.println(ok ? "CAMERA OK" : "CAMERA FAIL");  
-   
   }
   WiFi.mode(WIFI_STA);
   WiFi.begin(WIFI_SSID, WIFI_PASS);
@@ -41,47 +41,30 @@ void setup() {
 }
 
 void set_resolution(){
-
-  if (server.argName(0) == "res"){
-    int w, h;
-    String value = server.arg(0);
-    if (value == "320x240"){
-      w = 320; h = 240;
-    }
-    else if(value == "800x600"){
-      w = 800; h = 600;
-    }
-    else if(value == "1152x864"){
-      w = 1152; h = 864;
-    }
-    else if(value == "1400x1050"){
-      w = 1400; h = 1050;
-    }
-    else if(value == "1600x1200"){
-      w = 1600; h = 1200;
-    }
-    else{
-      server.send(503, "text/html", "SET-RES NO FOUND");
+  int w, h;
+  for (int i=0; i<server.args(); i++){
+    if(server.argName(i) == "width"){
+      w = server.arg(i).toInt();
+    }else if(server.argName(i) == "height"){
+      h = server.arg(i).toInt();
+    }else{
+      server.send(503, "text/html", "RES-ARG " + server.argName(i) +" NO EXIST");
       return;
     }
   }
   Res = esp32cam::Resolution::find(w, h);
-  if (!esp32cam::Camera.changeResolution(Res)) {
-    server.send(503, "text/html", "SET-RES FAIL");
+  if (esp32cam::Camera.changeResolution(Res)) {
+    server.send(200, "text/html", "SET-RES " + String(w) + "x" + String(h) + " PASS");
   }
   else{
-    server.send(200, "text/html", "SET-RES PASS");
+    server.send(503, "text/html", "SET-RES " + String(w) + "x" + String(h) + " FAIL");
   }
 }
 
 void send_picture(){
-
-  if (!esp32cam::Camera.changeResolution(Res)) {
-    server.send(503, "text/html", "SET-RES FAIL");
-    return;
-  }
   auto frame = esp32cam::capture();
   if (frame == nullptr) {
+    Serial.println("CAPTURE FAIL");
     server.send(503, "text/htm", "CAPTURE FAIL");
   }
   else{
@@ -92,6 +75,6 @@ void send_picture(){
   }
 }
 
-void loop() {
+void loop(){
   server.handleClient();
 }
