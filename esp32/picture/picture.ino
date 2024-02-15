@@ -7,8 +7,7 @@ static const char* WIFI_PASS = "mp9xcUBY7ySeZxmb";
 
 WebServer server(80);
 
-int w = 1600, h = 1200;
-auto Res = esp32cam::Resolution::find(w, h);
+esp32cam::Resolution Res;
 
 void setup() {
   Serial.begin(115200); 
@@ -42,7 +41,9 @@ void setup() {
 }
 
 void set_resolution(){
+
   if (server.argName(0) == "res"){
+    int w, h;
     String value = server.arg(0);
     if (value == "320x240"){
       w = 320; h = 240;
@@ -60,33 +61,35 @@ void set_resolution(){
       w = 1600; h = 1200;
     }
     else{
-      server.send(503, "text/html", "SET-RES FAIL");
+      server.send(503, "text/html", "SET-RES NO FOUND");
       return;
     }
   }
-  auto Res = esp32cam::Resolution::find(w, h);
+  Res = esp32cam::Resolution::find(w, h);
   if (!esp32cam::Camera.changeResolution(Res)) {
     server.send(503, "text/html", "SET-RES FAIL");
-    return;
   }
   else{
     server.send(200, "text/html", "SET-RES PASS");
   }
 }
 
-void send_picture()
-{
+void send_picture(){
+
+  if (!esp32cam::Camera.changeResolution(Res)) {
+    server.send(503, "text/html", "SET-RES FAIL");
+    return;
+  }
   auto frame = esp32cam::capture();
   if (frame == nullptr) {
     server.send(503, "text/htm", "CAPTURE FAIL");
-    return;
   }
-  Serial.printf("CAPTURE OK %dx%d %db\n", frame->getWidth(), frame->getHeight(),
-                static_cast<int>(frame->size()));
-  server.setContentLength(frame->size());
-  server.send(200, "image/jpeg");
-  WiFiClient client = server.client();
-  frame->writeTo(client);
+  else{
+    server.setContentLength(frame->size()); //ensure recibe the data size correct 
+    server.send(200, "image/jpeg");
+    WiFiClient client = server.client();
+    frame->writeTo(client);
+  }
 }
 
 void loop() {
