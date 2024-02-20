@@ -11,11 +11,22 @@ esp32cam::Resolution Res;
 
 void setup() {
   Serial.begin(115200); 
+  Serial.println();
+  delay(2000);
+  
+  WiFi.persistent(false);
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(WIFI_SSID, WIFI_PASS);
+  while (WiFi.status() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(400);
+  }
+  Serial.println("WiFi connected");
   {
     using namespace esp32cam;
+    Res = Resolution::find(1600, 1200);
     Config cfg;
     cfg.setPins(pins::AiThinker);
-    Res = esp32cam::Resolution::find(1600, 1200);
     cfg.setResolution(Res);
     cfg.setBufferCount(2);
     cfg.setJpeg(80);
@@ -23,12 +34,7 @@ void setup() {
     bool ok = Camera.begin(cfg);
     Serial.println(ok ? "CAMERA OK" : "CAMERA FAIL");  
   }
-  WiFi.mode(WIFI_STA);
-  WiFi.begin(WIFI_SSID, WIFI_PASS);
-  while (WiFi.status() != WL_CONNECTED) {
-    Serial.print(".");
-    delay(400);
-  }
+  
   Serial.println();
   Serial.print("http://");
   Serial.println(WiFi.localIP());
@@ -59,13 +65,14 @@ void set_resolution(){
   else{
     server.send(503, "text/html", "SET-RES " + String(w) + "x" + String(h) + " FAIL");
   }
+  Serial.println("set_resolution ended");
 }
 
 void send_picture(){
   auto frame = esp32cam::capture();
   if (frame == nullptr) {
     Serial.println("CAPTURE FAIL");
-    server.send(503, "text/htm", "CAPTURE FAIL");
+    server.send(503, "text/html", "CAPTURE FAIL");
   }
   else{
     server.setContentLength(frame->size()); //ensure recibe the data size correct 
@@ -73,6 +80,7 @@ void send_picture(){
     WiFiClient client = server.client();
     frame->writeTo(client);
   }
+  Serial.println("send_picture ended");
 }
 
 void loop(){

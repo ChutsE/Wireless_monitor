@@ -15,19 +15,29 @@ RES_DIC = {
 
 def response_url(url):
   img_resp = url_request.urlopen(url).read()
-  imgnp  =np.array(bytearray(img_resp),dtype=np.uint8)
+  imgnp  = np.array(bytearray(img_resp),dtype=np.uint8)
   frame = cv2.imdecode(imgnp,-1)
   return frame
 
+def response_url2(url):
+   cap = cv2.VideoCapture(url)
+   cap.open(url)
+   ret, frame = cap.read()
+   print(ret)
+   return frame
+
 def print_text(fps, date, time, image):
-    
+    if time.hour > 19 or time.hour < 6:
+       color = (255,255,255)
+    else:
+       color = (0,0,0)
     text = f"{int(fps)} FPS  {date.day}/{date.month}/{date.year}  {time.hour}:{time.minute}:{time.second}"
     font = cv2.FONT_HERSHEY_SIMPLEX
-            #   imagen  ,texto ,coordenadas,fuente,tamano  ,BRG        ,grosor
-    cv2.putText(image   ,text  ,(30,30)    ,font  ,0.5     ,(0,0,0), 1)
+            #   imagen  ,texto ,coordenadas,fuente,tamano  ,BRG    ,grosor
+    cv2.putText(image   ,text  ,(30,30)    ,font  ,0.5     ,color  , 1)
     return image
 
-def main(ESP_IP = "192.168.100.10", res = "high", fps_limit = 7, path_video = 'video_record\\video.mp4'):
+def main(ESP_IP = "192.168.100.12", res = "mid", fps_limit = 10, record = False, path_video = 'video_record\\video.mp4'):
 
   res_status = url_request.urlopen("http://" + ESP_IP + 
                                    "/setresolution"  +
@@ -43,9 +53,11 @@ def main(ESP_IP = "192.168.100.10", res = "high", fps_limit = 7, path_video = 'v
     date = date_and_time.date()
     time = date_and_time.time()
     frame = response_url("http://" + ESP_IP + "/getpicture")
+    #frame = response_url("http://" + ESP_IP + "/1600x1200.jpg")
 
     cv2.imshow("frame", print_text(fps, date, time, frame))
-    writer.write(frame)
+    if record:
+      writer.write(frame)
 
     if (cv2.waitKey(1) == ord("s")):
       break
@@ -60,6 +72,9 @@ def main(ESP_IP = "192.168.100.10", res = "high", fps_limit = 7, path_video = 'v
   writer.release()
   cv2.destroyAllWindows()
 
+  def args():
+     pass
+     
 if __name__ == "__main__":
     main()
 
