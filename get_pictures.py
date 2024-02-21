@@ -20,13 +20,6 @@ def response_url(url):
   frame = cv2.imdecode(imgnp,-1)
   return frame
 
-def response_url2(url):
-   cap = cv2.VideoCapture(url)
-   cap.open(url)
-   ret, frame = cap.read()
-   print(ret)
-   return frame
-
 def print_text(fps, date, time, image):
     if time.hour > 19 or time.hour < 6:
        color = (255,255,255)
@@ -38,7 +31,7 @@ def print_text(fps, date, time, image):
     cv2.putText(image   ,text  ,(30,30)    ,font  ,0.5     ,color  , 1)
     return image
 
-def main(ESP_IP = "192.168.0.243", res = "mid", fps_limit = 10, record = False, path_video = 'video_record\\video.mp4'):
+def main(ESP_IP, res, fps_limit, record, path_video = 'video_record\\video.mp4'):
 
   res_status = url_request.urlopen("http://" + ESP_IP + 
                                    "/setresolution"  +
@@ -51,11 +44,9 @@ def main(ESP_IP = "192.168.0.243", res = "mid", fps_limit = 10, record = False, 
   t_prev = tm()
   while True:
     date_and_time = dt.datetime.now()
-    date = date_and_time.date()
-    time = date_and_time.time()
     frame = response_url("http://" + ESP_IP + "/getpicture")
-
-    cv2.imshow("frame", print_text(fps, date, time, frame))
+    cv2.imshow("frame", print_text(fps, date_and_time.date(), date_and_time.time(), frame))
+    
     if record:
       writer.write(frame)
 
