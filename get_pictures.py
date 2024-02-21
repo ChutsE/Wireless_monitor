@@ -3,6 +3,7 @@ import numpy as np
 import urllib.request as url_request
 from time import time as tm
 import datetime as dt
+from argparse import ArgumentParser
 
 RES_DIC = {
   "low":       {"w": "320",  "h": "240"},
@@ -37,7 +38,7 @@ def print_text(fps, date, time, image):
     cv2.putText(image   ,text  ,(30,30)    ,font  ,0.5     ,color  , 1)
     return image
 
-def main(ESP_IP = "192.168.100.12", res = "mid", fps_limit = 10, record = False, path_video = 'video_record\\video.mp4'):
+def main(ESP_IP = "192.168.0.243", res = "mid", fps_limit = 10, record = False, path_video = 'video_record\\video.mp4'):
 
   res_status = url_request.urlopen("http://" + ESP_IP + 
                                    "/setresolution"  +
@@ -53,7 +54,6 @@ def main(ESP_IP = "192.168.100.12", res = "mid", fps_limit = 10, record = False,
     date = date_and_time.date()
     time = date_and_time.time()
     frame = response_url("http://" + ESP_IP + "/getpicture")
-    #frame = response_url("http://" + ESP_IP + "/1600x1200.jpg")
 
     cv2.imshow("frame", print_text(fps, date, time, frame))
     if record:
@@ -71,12 +71,16 @@ def main(ESP_IP = "192.168.100.12", res = "mid", fps_limit = 10, record = False,
 
   writer.release()
   cv2.destroyAllWindows()
-
-  def args():
-     pass
      
 if __name__ == "__main__":
-    main()
-
-
-
+  argparser = ArgumentParser()
+  argparser.add_argument("-i", "--esp_ip", help="ESP32 IP Address")
+  argparser.add_argument("-q", "--quality", help="CAM Resolution quality: "+str(RES_DIC.keys()))
+  argparser.add_argument("-f", "--fps_limit", help="FPS Limit")
+  argparser.add_argument("-r", "--record", help="Record bool" , action="store_true")
+  args = argparser.parse_args()
+  
+  main(ESP_IP     = args.esp_ip,
+       res        = args.quality,
+       fps_limit  = int(args.fps_limit),
+       record     = args.record)
