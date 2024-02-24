@@ -6,6 +6,7 @@ from time import time as tm
 from argparse import ArgumentParser
 from threading import Thread
 
+
 RES_DIC = {
   "low":       {"w": "320",  "h": "240"},
   "low-mid":   {"w": "640",  "h": "480"},
@@ -15,7 +16,7 @@ RES_DIC = {
   "very-high": {"w": "1600", "h": "1200"}
 }
 
-def response_url(url):
+def picture_request(url):
   try:
     img_resp = url_request.urlopen(url).read()
   except Exception as e:
@@ -40,6 +41,10 @@ def print_text(fps, date, time, image):
     cv2.putText(image   ,text  ,(30,30)    ,font  ,0.5     ,color  , 1)
     return image
 
+def take_picture(ESP_IP = "192.168.100.3"):
+  frame = picture_request("http://" + ESP_IP + "/getpicture")[1]
+  cv2.imwrite("picture.jpg", frame)
+
 def main(ESP_IP, res, fps_limit, record, path_video = 'video.mp4'):
   
   w = RES_DIC[res]["w"]
@@ -55,7 +60,7 @@ def main(ESP_IP, res, fps_limit, record, path_video = 'video.mp4'):
   fps = 0
   t_prev = tm()
   while True:
-    ret, frame = response_url("http://" + ESP_IP + "/getpicture")
+    ret, frame = picture_request("http://" + ESP_IP + "/getpicture")
     if ret:
 
       date_and_time = dt.datetime.now()
@@ -74,12 +79,10 @@ def main(ESP_IP, res, fps_limit, record, path_video = 'video.mp4'):
       fps = 1 / (t - t_prev)
       t_prev = t
 
-    else:
-      break
 
   video.release()
   cv2.destroyAllWindows()
-     
+
 if __name__ == "__main__":
   argparser = ArgumentParser()
   argparser.add_argument("-i", "--esp_ip", help="ESP32 IP Address")
@@ -88,8 +91,14 @@ if __name__ == "__main__":
   argparser.add_argument("-r", "--record", help="Record bool" , action="store_true")
   args = argparser.parse_args()
   
-  t1 = Thread(name="main_thread", target=main(ESP_IP     = args.esp_ip,
-                                              res        = args.quality,
-                                              fps_limit  = int(args.fps_limit),
-                                              record     = args.record))
-  t1.start()
+  import tele_bot
+  t_telegram = Thread(name="polling_thread", target=tele_bot.polling)
+  t_main = Thread(name="main_thread", target=main, args=(ESP_IP     := args.esp_ip,
+                                                          res        := args.quality,
+                                                          fps_limit  := int(args.fps_limit),
+                                                          record     := args.record))
+                      
+  t_telegram.start()
+  t_main.start()
+
+
