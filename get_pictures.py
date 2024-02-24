@@ -15,13 +15,21 @@ RES_DIC = {
 }
 
 def response_url(url):
-  img_resp = url_request.urlopen(url).read()
-  imgnp  = np.array(bytearray(img_resp),dtype=np.uint8)
-  frame = cv2.imdecode(imgnp,-1)
-  return frame
+  try:
+    img_resp = url_request.urlopen(url).read()
+  except Exception as e:
+    print(e)
+    frame = None
+    ret = False
+  else:
+    imgnp  = np.array(bytearray(img_resp),dtype=np.uint8)
+    frame = cv2.imdecode(imgnp,-1)
+    ret = True
+  finally:
+    return ret, frame
 
 def print_text(fps, date, time, image):
-    if time.hour > 19 or time.hour < 6:
+    if time.hour >= 19 or time.hour <= 6:
        color = (255,255,255)
     else:
        color = (0,0,0)
@@ -31,36 +39,44 @@ def print_text(fps, date, time, image):
     cv2.putText(image   ,text  ,(30,30)    ,font  ,0.5     ,color  , 1)
     return image
 
-def main(ESP_IP, res, fps_limit, record, path_video = 'video_record\\video.mp4'):
+def main(ESP_IP, res, fps_limit, record, path_video = 'video.mp4'):
+  
+  w = RES_DIC[res]["w"]
+  h = RES_DIC[res]["h"]
 
   res_status = url_request.urlopen("http://" + ESP_IP + 
                                    "/setresolution"  +
-                                   "?width=" + RES_DIC[res]["w"] +
-                                   "&height=" + RES_DIC[res]["h"])
+                                   "?width=" + w +
+                                   "&height=" + h)
 
-  writer = cv2.VideoWriter(path_video, cv2.VideoWriter_fourcc(*'XIVX'), 10, (int(RES_DIC[res]["w"]), int(RES_DIC[res]["h"])))
+  video = cv2.VideoWriter(path_video, cv2.VideoWriter_fourcc(*'mp4v'), fps_limit, (int(w), int(h)))
 
   fps = 0
   t_prev = tm()
   while True:
-    date_and_time = dt.datetime.now()
-    frame = response_url("http://" + ESP_IP + "/getpicture")
-    cv2.imshow("frame", print_text(fps, date_and_time.date(), date_and_time.time(), frame))
-    
-    if record:
-      writer.write(frame)
+    ret, frame = response_url("http://" + ESP_IP + "/getpicture")
+    if ret:
 
-    if (cv2.waitKey(1) == ord("s")):
+      date_and_time = dt.datetime.now()
+      cv2.imshow("video", print_text(fps, date_and_time.date(), date_and_time.time(), frame))
+
+      if record:
+        video.write(frame)
+
+      if (cv2.waitKey(1) == ord("s")):
+        break
+
+      while(tm() - t_prev) < (1/(fps_limit+1)):
+        pass
+
+      t = tm()
+      fps = 1 / (t - t_prev)
+      t_prev = t
+
+    else:
       break
 
-    while(tm() - t_prev) < (1/(fps_limit+1)):
-      pass
-
-    t = tm()
-    fps = 1 / (t - t_prev)
-    t_prev = t
-
-  writer.release()
+  video.release()
   cv2.destroyAllWindows()
      
 if __name__ == "__main__":
