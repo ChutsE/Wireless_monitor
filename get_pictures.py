@@ -1,9 +1,10 @@
 import cv2
 import numpy as np
 import urllib.request as url_request
-from time import time as tm
 import datetime as dt
+from time import time as tm
 from argparse import ArgumentParser
+from threading import Thread
 
 RES_DIC = {
   "low":       {"w": "320",  "h": "240"},
@@ -87,7 +88,8 @@ if __name__ == "__main__":
   argparser.add_argument("-r", "--record", help="Record bool" , action="store_true")
   args = argparser.parse_args()
   
-  main(ESP_IP     = args.esp_ip,
-       res        = args.quality,
-       fps_limit  = int(args.fps_limit),
-       record     = args.record)
+  t1 = Thread(name="main_thread", target=main(ESP_IP     = args.esp_ip,
+                                              res        = args.quality,
+                                              fps_limit  = int(args.fps_limit),
+                                              record     = args.record))
+  t1.start()
