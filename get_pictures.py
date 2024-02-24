@@ -2,6 +2,8 @@ import cv2
 import numpy as np
 import urllib.request as url_request
 import datetime as dt
+import os
+import psutil
 from time import time as tm
 from argparse import ArgumentParser
 from threading import Thread
@@ -45,6 +47,21 @@ def take_picture(ESP_IP = "192.168.100.3"):
   frame = picture_request("http://" + ESP_IP + "/getpicture")[1]
   cv2.imwrite("picture.jpg", frame)
 
+def get_video_names(videos_dir = "videos/"):
+    video_names = os.listdir(videos_dir)
+    return sorted(video_names)
+  
+def disk_managment(videos_dir = "videos/"):
+  disk_usage = psutil.disk_usage("/")
+  free = disk_usage.free / 1024**3
+  used = disk_usage.used / 1024**3
+  total = disk_usage.total / 1024**3
+  print(f"DISK STAT: free:{free:.2f}GB usage:{used:.2f}GB total:{total:.2f}GB")
+
+  while  free < 6:
+    video_names = get_video_names()
+    os.remove(videos_dir + video_names[0])
+
 def main(ESP_IP, res, fps_limit, record, path_video = 'video.mp4'):
   
   w = RES_DIC[res]["w"]
@@ -79,9 +96,10 @@ def main(ESP_IP, res, fps_limit, record, path_video = 'video.mp4'):
       fps = 1 / (t - t_prev)
       t_prev = t
 
-
   video.release()
   cv2.destroyAllWindows()
+
+  disk_managment()
 
 if __name__ == "__main__":
   argparser = ArgumentParser()
@@ -100,5 +118,3 @@ if __name__ == "__main__":
                       
   t_telegram.start()
   t_main.start()
-
-
