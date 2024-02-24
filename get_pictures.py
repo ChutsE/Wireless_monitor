@@ -43,9 +43,11 @@ def print_text(fps, date, time, image):
 
 def take_picture(ESP_IP = "192.168.100.3"):
   frame = picture_request("http://" + ESP_IP + "/getpicture")[1]
+  print(frame.size, frame.itemsize)
   cv2.imwrite("picture.jpg", frame)
 
-def main(ESP_IP, res, fps_limit, record, video_hours = 1, video_folder = 'videos/'):
+                                          #Bytes
+def main(ESP_IP, res, fps_limit, record, size_limit = 47000000, video_folder = 'videos/'):
   
   w = RES_DIC[res]["w"]
   h = RES_DIC[res]["h"]
@@ -54,11 +56,12 @@ def main(ESP_IP, res, fps_limit, record, video_hours = 1, video_folder = 'videos
                                    "/setresolution"    +
                                    "?width="  + str(w) +
                                    "&height=" + str(h))
+  BytesperPixels = 0.065
+  timestamp_limit = size_limit / (w * h * BytesperPixels)
   leave = False
   while not leave:
     video_name = f"{dt.datetime.now().ctime()}.mp4"
     video = cv2.VideoWriter(video_folder + video_name, cv2.VideoWriter_fourcc(*'mp4v'), fps_limit, (w, h))
-    timestamp_limit = 3600 * video_hours * fps_limit
     timestamp = 0
     fps = 0
     t_prev = tm()
@@ -99,9 +102,9 @@ if __name__ == "__main__":
   import tele_bot
   t_telegram = Thread(name="polling_thread", target=tele_bot.polling)
   t_main = Thread(name="main_thread", target=main, args=(ESP_IP     := args.esp_ip,
-                                                          res        := args.quality,
-                                                          fps_limit  := int(args.fps_limit),
-                                                          record     := args.record))
+                                                         res        := args.quality,
+                                                         fps_limit  := int(args.fps_limit),
+                                                         record     := args.record))
                       
   t_telegram.start()
   t_main.start()
