@@ -10,12 +10,12 @@ from threading import Thread
 
 
 RES_DIC = {
-  "low":       {"w": "320",  "h": "240"},
-  "low-mid":   {"w": "640",  "h": "480"},
-  "mid":       {"w": "800",  "h": "600"},
-  "mid-high":  {"w": "1024", "h": "768"},
-  "high":      {"w": "1280", "h": "1024"},
-  "very-high": {"w": "1600", "h": "1200"}
+  "low":       {"w": 320,  "h": 240},
+  "low-mid":   {"w": 640,  "h": 480},
+  "mid":       {"w": 800,  "h": 600},
+  "mid-high":  {"w": 1024, "h": 768},
+  "high":      {"w": 1280, "h": 1024},
+  "very-high": {"w": 1600, "h": 1200}
 }
 
 def picture_request(url):
@@ -33,23 +33,24 @@ def picture_request(url):
     return ret, frame
 
 def print_text(fps, date, time, image):
-    if time.hour >= 19 or time.hour <= 6:
-       color = (255,255,255)
-    else:
-       color = (0,0,0)
-    text = f"{int(fps)} FPS  {date.day}/{date.month}/{date.year}  {time.hour}:{time.minute}:{time.second}"
-    font = cv2.FONT_HERSHEY_SIMPLEX
-            #   imagen  ,texto ,coordenadas,fuente,tamano  ,BRG    ,grosor
-    cv2.putText(image   ,text  ,(30,30)    ,font  ,0.5     ,color  , 1)
-    return image
+  if time.hour >= 19 or time.hour <= 6:
+      color = (255,255,255)
+  else:
+      color = (0,0,0)
+  text = f"{int(fps)} FPS  {date.day}/{date.month}/{date.year}  {time.hour}:{time.minute}:{time.second}"
+  font = cv2.FONT_HERSHEY_SIMPLEX
+          #   imagen  ,texto ,coordenadas,fuente,tamano  ,BRG    ,grosor
+  cv2.putText(image   ,text  ,(30,30)    ,font  ,0.5     ,color  , 1)
+  return image
 
 def take_picture(ESP_IP = "192.168.100.3"):
   frame = picture_request("http://" + ESP_IP + "/getpicture")[1]
+  print(frame.size, frame.itemsize)
   cv2.imwrite("picture.jpg", frame)
 
 def get_video_names(videos_dir = "videos/"):
-    video_names = os.listdir(videos_dir)
-    return sorted(video_names)
+  video_names = os.listdir(videos_dir)
+  return sorted(video_names)
   
 def disk_managment(videos_dir = "videos/"):
   disk_usage = psutil.disk_usage("/")
@@ -62,44 +63,51 @@ def disk_managment(videos_dir = "videos/"):
     video_names = get_video_names()
     os.remove(videos_dir + video_names[0])
 
-def main(ESP_IP, res, fps_limit, record, path_video = 'video.mp4'):
+                                          #Bytes
+def main(ESP_IP, res, fps_limit, record, size_limit = 47000000, video_folder = 'videos/'):
   
   w = RES_DIC[res]["w"]
   h = RES_DIC[res]["h"]
 
-  res_status = url_request.urlopen("http://" + ESP_IP + 
-                                   "/setresolution"  +
-                                   "?width=" + w +
-                                   "&height=" + h)
+  res_status = url_request.urlopen("http://"  + ESP_IP + 
+                                   "/setresolution"    +
+                                   "?width="  + str(w) +
+                                   "&height=" + str(h))
+  BytesperPixels = 0.062
+  timestamp_limit = size_limit / (w * h * BytesperPixels)
+  leave = False
+  while not leave:
+    video_name = f"{dt.datetime.now().ctime()}.mp4"
+    video = cv2.VideoWriter(video_folder + video_name, cv2.VideoWriter_fourcc(*'mp4v'), fps_limit, (w, h))
+    timestamp = 0
+    fps = 0
+    t_prev = tm()
+    while timestamp_limit > timestamp:
+      ret, frame = picture_request("http://" + ESP_IP + "/getpicture")
+      if ret:
 
-  video = cv2.VideoWriter(path_video, cv2.VideoWriter_fourcc(*'mp4v'), fps_limit, (int(w), int(h)))
+        date_and_time = dt.datetime.now()
+        cv2.imshow("video", print_text(fps, date_and_time.date(), date_and_time.time(), frame))
 
-  fps = 0
-  t_prev = tm()
-  while True:
-    ret, frame = picture_request("http://" + ESP_IP + "/getpicture")
-    if ret:
+        if record:
+          video.write(frame)
 
-      date_and_time = dt.datetime.now()
-      cv2.imshow("video", print_text(fps, date_and_time.date(), date_and_time.time(), frame))
+        if (cv2.waitKey(1) == ord("s")):
+          leave = True
+          break
 
-      if record:
-        video.write(frame)
+        while(tm() - t_prev) < (1/(fps_limit+1)):
+          pass
 
-      if (cv2.waitKey(1) == ord("s")):
-        break
-
-      while(tm() - t_prev) < (1/(fps_limit+1)):
-        pass
-
-      t = tm()
-      fps = 1 / (t - t_prev)
-      t_prev = t
-
-  video.release()
-  cv2.destroyAllWindows()
-
-  disk_managment()
+        t = tm()
+        fps = 1 / (t - t_prev)
+        t_prev = t
+        
+        timestamp += 1
+        
+    video.release()
+    cv2.destroyAllWindows()
+    disk_managment()
 
 if __name__ == "__main__":
   argparser = ArgumentParser()
@@ -112,9 +120,9 @@ if __name__ == "__main__":
   import tele_bot
   t_telegram = Thread(name="polling_thread", target=tele_bot.polling)
   t_main = Thread(name="main_thread", target=main, args=(ESP_IP     := args.esp_ip,
-                                                          res        := args.quality,
-                                                          fps_limit  := int(args.fps_limit),
-                                                          record     := args.record))
+                                                         res        := args.quality,
+                                                         fps_limit  := int(args.fps_limit),
+                                                         record     := args.record))
                       
   t_telegram.start()
   t_main.start()
