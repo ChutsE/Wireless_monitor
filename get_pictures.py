@@ -45,7 +45,6 @@ def print_text(fps, date, time, image):
 
 def take_picture(ESP_IP = "192.168.100.3"):
   frame = picture_request("http://" + ESP_IP + "/getpicture")[1]
-  print(frame.size, frame.itemsize)
   cv2.imwrite("picture.jpg", frame)
 
 def get_video_names(videos_dir = "videos/"):
@@ -59,9 +58,10 @@ def disk_managment(videos_dir = "videos/"):
   total = disk_usage.total / 1024**3
   print(f"DISK STAT: free:{free:.2f}GB usage:{used:.2f}GB total:{total:.2f}GB")
 
-  while  free < 6:
+  while free < 8:
     video_names = get_video_names()
     os.remove(videos_dir + video_names[0])
+    free = disk_usage.free / 1024**3
 
                                           #Bytes
 def main(ESP_IP, res, fps_limit, record, size_limit = 47000000, video_folder = 'videos/'):
