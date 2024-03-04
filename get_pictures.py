@@ -61,7 +61,7 @@ def disk_managment(videos_dir = "videos/"):
   while free < 8:
     video_names = get_video_names()
     os.remove(videos_dir + video_names[0])
-    free = disk_usage.free / 1024**3
+    free = psutil.disk_usage("/").free / 1024**3
 
                                           #Bytes
 def main(ESP_IP, res, fps_limit, record, size_limit = 47000000, video_folder = 'videos/'):
