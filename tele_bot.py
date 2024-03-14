@@ -89,9 +89,10 @@ def videos_tree(video_names_list):
 
     for i in range(len_videos):
         items = video_names_list[i].split(" ")
-        date = items[3] + "/" + items[1] + "/" + items[5][:4]
-        time = items[4]
-
+        if items.count('') > 0:
+            items.remove("")
+        date = items[2] + "/" + items[1] + "/" + items[4][:4]
+        time = items[3]
         if (date != date_prev and i != 0) or (i == (len_videos - 1)):
             videos_dict[date_prev] = time_list
             time_list = []
