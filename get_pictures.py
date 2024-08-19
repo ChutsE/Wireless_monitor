@@ -43,7 +43,7 @@ def print_text(fps, date, time, image):
   cv2.putText(image   ,text  ,(30,30)    ,font  ,0.5     ,color  , 1)
   return image
 
-def take_picture(ESP_IP = "192.168.100.3"):
+def take_picture(ESP_IP = "192.168.3.24"):
   frame = picture_request("http://" + ESP_IP + "/getpicture")[1]
   cv2.imwrite("picture.jpg", frame)
 
@@ -65,7 +65,7 @@ def disk_managment(videos_dir = "videos/"):
 
                                           #Bytes
 def main(ESP_IP, res, fps_limit, record, size_limit = 47000000, video_folder = 'videos/'):
-  
+  """
   w = RES_DIC[res]["w"]
   h = RES_DIC[res]["h"]
 
@@ -73,6 +73,9 @@ def main(ESP_IP, res, fps_limit, record, size_limit = 47000000, video_folder = '
                                    "/setresolution"    +
                                    "?width="  + str(w) +
                                    "&height=" + str(h))
+  """
+  w = 1024
+  h = 768
   BytesperPixels = 0.062
   timestamp_limit = size_limit / (w * h * BytesperPixels)
   leave = False
@@ -111,18 +114,23 @@ def main(ESP_IP, res, fps_limit, record, size_limit = 47000000, video_folder = '
 
 if __name__ == "__main__":
   argparser = ArgumentParser()
-  argparser.add_argument("-i", "--esp_ip", help="ESP32 IP Address")
-  argparser.add_argument("-q", "--quality", help="CAM Resolution quality: "+str(RES_DIC.keys()))
-  argparser.add_argument("-f", "--fps_limit", help="FPS Limit")
+  argparser.add_argument("-i", "--esp_ips", nargs='+', help="ESP32 IP Addresses")
+  argparser.add_argument("-q", "--quality", help="CAM Resolution quality: "+ str(RES_DIC.keys()), default="mid")
+  argparser.add_argument("-f", "--fps_limit", help="FPS Limit", default="5")
   argparser.add_argument("-r", "--record", help="Record bool" , action="store_true")
+  argparser.add_argument("-t", "--tele_bot", help="Tele Bot bool" , action="store_true")
   args = argparser.parse_args()
   
-  import tele_bot
-  t_telegram = Thread(name="polling_thread", target=tele_bot.polling)
-  t_main = Thread(name="main_thread", target=main, args=(ESP_IP     := args.esp_ip,
-                                                         res        := args.quality,
-                                                         fps_limit  := int(args.fps_limit),
-                                                         record     := args.record))
-                      
-  t_telegram.start()
-  t_main.start()
+  if args.tele_bot:
+    import tele_bot
+    t_telegram = Thread(name="polling_thread", target=tele_bot.polling)
+    t_telegram.start()
+  
+  threads = []
+  for esp_device in args.esp_ips:
+    threads.append(Thread(name="main_thread", target=main, args=(ESP_IP     := esp_device,
+                                                                 res        := args.quality,
+                                                                 fps_limit  := int(args.fps_limit),
+                                                                 record     := args.record)))
+  for thread in threads:
+    thread.start()

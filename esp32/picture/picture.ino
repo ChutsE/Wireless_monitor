@@ -2,7 +2,7 @@
 #include <WebServer.h>
 #include <esp32cam.h>
 
-static const char* WIFI_SSID = "TP-FES";
+static const char* WIFI_SSID = "TP-VJ";
 static const char* WIFI_PASS = "FES38613921";
 
 WebServer server(80);
@@ -12,7 +12,7 @@ esp32cam::Resolution Res;
 void setup() {
   Serial.begin(115200);
   Serial.println();
-  delay(2000);
+  delay(500);
 
   WiFi.persistent(false);
   WiFi.mode(WIFI_STA);
@@ -24,7 +24,7 @@ void setup() {
   Serial.println("WiFi connected");
   {
     using namespace esp32cam;
-    Res = esp32cam::Resolution::find(1600, 1200);
+    Res = esp32cam::Resolution::find(800, 600);
     Config cfg;
     cfg.setPins(pins::AiThinker);
     cfg.setResolution(Res);
@@ -34,7 +34,6 @@ void setup() {
     bool ok = Camera.begin(cfg);
     Serial.println(ok ? "CAMERA OK" : "CAMERA FAIL");
   }
-
   Serial.println();
   Serial.print("http://");
   Serial.println(WiFi.localIP());
@@ -79,8 +78,9 @@ void send_picture() {
     server.send(200, "image/jpeg");
     WiFiClient client = server.client();
     frame->writeTo(client);
+    client.stop();
   }
-  Serial.println("send_picture ended");
+  delay(50);
 }
 
 void loop() {
